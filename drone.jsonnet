@@ -1,89 +1,82 @@
-local pipeline(name) = {
+local nodeType = {
+  type: 'um-common',
+};
+
+local mountedDockerVolume = {
+  name: 'docker',
+  path: '/var/run/docker.sock',
+};
+
+local mountedBuildVolume = {
+  name: 'build',
+  path: '/drone/src/public',
+};
+
+local dockerVolume = {
+  name: 'docker',
+  host: {
+    path: '/var/run/docker.sock',
+  },
+};
+
+local buildVolume = {
+  name: 'build',
+  host: {
+    path: '/drone/src/public',
+  },
+};
+
+local DockerfilePath = 'Dockerfile';
+
+local buildEnviroment = {
+  username: 'json_key',
+  dockerfile: DockerfilePath,
+  registry: 'cr.yandex',
+  repo: 'cr.yandex/umarket/${DRONE_REPO_NAME}',
+  use_cache: true,
+  tags: '${DRONE_COMMIT_SHA:0:7}',
+  password: { from_secret: 'yandex_cr_json_key' },
+};
+
+
+local buildDockerImage = {
+  name: 'build image',
+  image: 'plugins/docker',
+  trusted: true,
+  use_cache: true,
+  volumes: [
+    mountedDockerVolume,
+    mountedBuildVolume,
+  ],
+  settings: buildEnviroment,
+  event: [
+    'push',
+  ],
+};
+
+local build_pipeline = {
   kind: 'pipeline',
   type: 'docker',
-  name: name,
-  node: {
-    type: 'um-common',
+  name: 'nuxt_pipeline_b2b_prod',
+  node: nodeType,
+  volumes: [
+    dockerVolume,
+    buildVolume,
+  ],
+  trigger: {
+    event: {
+      include: ['push', 'tag'],
+      exclude: ['pull_request'],
+    },
+    branch: [
+      'master',
+    ],
   },
-  withTrigger(trigger):: self + {
-    trigger: trigger,
-  },
-  withVolumes(volumes):: self + {
-    volumes: volumes,
-  },
-  withServices(services):: self + {
-    services: services,
-  },
-  withSteps(steps):: self + {
-    steps: steps,
-  },
+  steps: [
+    buildDockerImage,
+  ],
 };
-
-local step(name, image) = {
-  name: name,
-  image: image,
-  withCommands(commands):: self + {
-    commands: commands,
-  },
-  withWhen(when):: self + {
-    when: when,
-  },
-  withVolumes(volumes):: self + {
-    volumes: volumes,
-  },
-  withEnvs(envs):: self + {
-    environment: envs,
-  },
-  withDeps(deps):: self + {
-    depends_on: deps,
-  },
-  withSettings(settings):: self + {
-    settings: settings,
-  },
-};
-
-local buildAndPublishImage(name, repo, tags, dockerfile, secret) =
-  step(name, 'plugins/gcr')
-  .withSettings({
-    username: 'json_key',
-    registry: 'cr.yandex',
-    repo: 'cr.yandex/' + repo,
-    tags: tags,
-    purge: false,
-    password: { from_secret: secret },
-    dockerfile: dockerfile,
-  })
-  .withEnvs({
-    GITHUB_PRIVATE_REPO_TOKEN: { from_secret: 'go_private_repo_gh_token' },
-  })
-  .withVolumes([{ name: 'docker', path: '/var/run/docker.sock' }]);
-
-local volumes = [
-  { name: 'docker', host: { path: '/var/run/docker.sock' } },
-];
-
-
-local production =
-  pipeline('production')
-  .withTrigger({
-    ref: 'refs/tags/v*',
-    event: ['tag'],
-  })
-  .withTrigger({
-    ref: 'refs/heads/master',
-    event: ['push'],
-  })
-  .withVolumes(volumes)
-  .withSteps([
-    buildAndPublishImage(
-      name='build and publish image uzum',
-      repo='umarket/' + '${DRONE_REPO_NAME,,}',
-      tags=['${DRONE_TAG}', 'latest'],
-      dockerfile='Dockerfile',
-      secret='yandex_cr_json_key'
-    ),
-  ]);
 
 [
-  production,
+  build_pipeline,
 ]
