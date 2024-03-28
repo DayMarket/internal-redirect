@@ -87,7 +87,7 @@ local build_pipeline_master = {
   ],
   trigger: {
     event: {
-      include: ['push', 'tag'],
+      include: ['push'],
       exclude: ['pull_request'],
     },
     branch: [
@@ -110,7 +110,7 @@ local build_pipeline_tag = {
   ],
   trigger: {
     event: {
-      include: ['push', 'tag'],
+      include: ['tag'],
       exclude: ['pull_request'],
     },
     branch: [
