@@ -79,7 +79,7 @@ local buildDockerImageTag = {
 local build_pipeline_master = {
   kind: 'pipeline',
   type: 'docker',
-  name: 'nuxt_pipeline_b2b_prod',
+  name: 'build master',
   node: nodeType,
   volumes: [
     dockerVolume,
@@ -102,7 +102,7 @@ local build_pipeline_master = {
 local build_pipeline_tag = {
   kind: 'pipeline',
   type: 'docker',
-  name: 'nuxt_pipeline_b2b_prod',
+  name: 'build tag',
   node: nodeType,
   volumes: [
     dockerVolume,
