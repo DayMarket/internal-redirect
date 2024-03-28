@@ -29,17 +29,24 @@ local buildVolume = {
 local DockerfilePath = 'Dockerfile';
 
 local buildEnviroment = {
-  username: 'json_key',
-  dockerfile: DockerfilePath,
-  registry: 'cr.yandex',
-  repo: 'cr.yandex/umarket/${DRONE_REPO_NAME}',
-  use_cache: true,
-  tags: '${DRONE_COMMIT_SHA:0:7}',
-  password: { from_secret: 'yandex_cr_json_key' },
+  common: {
+    username: 'json_key',
+    dockerfile: DockerfilePath,
+    registry: 'cr.yandex',
+    repo: 'cr.yandex/umarket/${DRONE_REPO_NAME}',
+    use_cache: true,
+    password: { from_secret: 'yandex_cr_json_key' },
+  },
+  master: self.common {
+    tags: '${DRONE_COMMIT_SHA:0:7}',
+  },
+  tag: self.common {
+    tags: '${DRONE_TAG}',
+  },
 };
 
 
-local buildDockerImage = {
+local buildDockerImageMaster = {
   name: 'build image',
   image: 'plugins/docker',
   trusted: true,
@@ -48,13 +55,28 @@ local buildDockerImage = {
     mountedDockerVolume,
     mountedBuildVolume,
   ],
-  settings: buildEnviroment,
+  settings: buildEnviroment.master,
   event: [
     'push',
   ],
 };
 
-local build_pipeline = {
+local buildDockerImageTag = {
+  name: 'build image',
+  image: 'plugins/docker',
+  trusted: true,
+  use_cache: true,
+  volumes: [
+    mountedDockerVolume,
+    mountedBuildVolume,
+  ],
+  settings: buildEnviroment.tag,
+  event: [
+    'push',
+  ],
+};
+
+local build_pipeline_master = {
   kind: 'pipeline',
   type: 'docker',
   name: 'nuxt_pipeline_b2b_prod',
@@ -73,11 +95,35 @@ local build_pipeline = {
     ],
   },
   steps: [
-    buildDockerImage,
+    buildDockerImageMaster,
   ],
 };
 
+local build_pipeline_tag = {
+  kind: 'pipeline',
+  type: 'docker',
+  name: 'nuxt_pipeline_b2b_prod',
+  node: nodeType,
+  volumes: [
+    dockerVolume,
+    buildVolume,
+  ],
+  trigger: {
+    event: {
+      include: ['push', 'tag'],
+      exclude: ['pull_request'],
+    },
+    branch: [
+      'master',
+    ],
+  },
+  steps: [
+    buildDockerImageTag,
+  ],
+};
+
+
 [
-  build_pipeline,
+  build_pipeline_master,
+  build_pipeline_tag,
 ]
-// for push
