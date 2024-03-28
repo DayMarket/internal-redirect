@@ -69,6 +69,10 @@ local production =
     ref: 'refs/tags/v*',
     event: ['tag'],
   })
+  .withTrigger({
+    ref: 'refs/heads/master',
+    event: ['push'],
+  })
   .withVolumes(volumes)
   .withSteps([
     buildAndPublishImage(
@@ -77,10 +81,7 @@ local production =
       tags=['${DRONE_TAG}', 'latest'],
       dockerfile='Dockerfile',
       secret='yandex_cr_json_key'
-    ).withDeps([
-      'golint',
-      'gotest',
-    ]),
+    ),
   ]);
 
 [
